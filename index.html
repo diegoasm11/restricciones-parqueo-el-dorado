@@ -67,7 +67,12 @@ td.rc.tow{background:var(--tow)!important;color:var(--tow-fg);font-weight:600}
 th.sep,td.sep{border-left:2px solid var(--fg)}
 tr.hl td:first-child{box-shadow:inset 4px 0 0 var(--sel)}
 .dim td.rc:not(.on){opacity:.35}
-svg.arrows{position:absolute;inset:0;pointer-events:none;overflow:visible}
+svg.arrows{position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:1}
+#grid tbody td:first-child,#grid thead th:first-child{position:sticky;left:0;z-index:2;background:var(--surface);border-right:2px solid var(--fg)}
+#grid tbody tr:nth-child(even) td:first-child{background:var(--stripe)}
+#grid thead th:first-child{z-index:3}
+tr.zone td:first-child{position:static!important;border-right:1px solid var(--line)!important}
+.zl{position:sticky;left:6px}
 svg.arrows line{stroke:var(--arrow);stroke-width:1.6}
 svg.arrows line.off{opacity:.15}
 svg.arrows line.on{stroke-width:2.6}
@@ -103,9 +108,9 @@ tr.no td:nth-child(-n+3){opacity:.4}
 .chip.hit{background:var(--sign);color:var(--sign-fg);border-color:var(--sign-fg)}
 button.chip{cursor:pointer}
 button.chip:hover{background:var(--if);color:var(--if-fg)}
-details.ref{background:var(--surface);border:1px solid var(--line)}
-details.ref summary{cursor:pointer;padding:2px 10px;font-family:var(--f-display);font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:.8rem}
-details.ref summary small{font-family:var(--f-body);text-transform:none;letter-spacing:0;color:var(--muted);font-weight:400;margin-left:8px}
+.ref{background:var(--surface);border:1px solid var(--line)}
+.ref .reft{padding:2px 10px;font-family:var(--f-display);font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:.8rem}
+.ref .reft small{font-family:var(--f-body);text-transform:none;letter-spacing:0;color:var(--muted);font-weight:400;margin-left:8px}
 .refgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:4px;padding:0 8px 6px}
 .refgrid .chips{gap:2px;margin-top:2px}
 .refgrid .chip{font-size:.62rem;padding:0 3px}
@@ -137,7 +142,7 @@ footer{color:var(--muted);font-size:.8rem;max-width:90ch}
     <span><i class="sw" style="background:var(--tow)"></i>Remolcado</span>
     <span>↔ regla en ambos sentidos</span>
   </div>
-  <details class="ref" id="ref" open><summary>Subcategorías y tipos IATA<small>Toca un tipo para ver dónde parquea; pasa el cursor sobre una celda para ver sus tipos</small></summary><div class="refgrid" id="refgrid"></div></details>
+  <section class="ref" id="ref"><div class="reft">Subcategorías y tipos IATA<small>Toca un tipo para ver dónde parquea; pasa el cursor sobre una celda para ver sus tipos</small></div><div class="refgrid" id="refgrid"></div></section>
   <div class="main">
     <div class="scroller"><div class="stage" id="stage"><table id="grid"></table><svg class="arrows" id="svg"></svg></div></div>
     <aside id="panel" aria-live="polite"></aside>
@@ -359,7 +364,7 @@ function render(){
   ['Posición','Grupos aceptados','Límite del plan'].forEach((t,k)=>{const th=document.createElement('th');th.textContent=t;th.className=k===2?'fixn':'fix';hr.appendChild(th)});
   cols.forEach(()=>['Si','Entonces'].forEach((t,k)=>{const th=document.createElement('th');th.textContent=t;if(!k)th.className='sep';hr.appendChild(th)}));
   const tb=grid.createTBody();
-  const zr=tb.insertRow(); zr.className='zone'; const zc=zr.insertCell(); zc.colSpan=3+cols.length*2; zc.textContent=ZONES[zone].name;
+  const zr=tb.insertRow(); zr.className='zone'; const zc=zr.insertCell(); zc.colSpan=3+cols.length*2; zc.innerHTML='<span class="zl">'+esc(ZONES[zone].name)+'</span>';
   rows.forEach(([p,mx,acc,note],i)=>{
     const tr=tb.insertRow(); tr.dataset.pos=p;
     const c0=tr.insertCell(); const b=document.createElement('button'); b.className='pos'; b.textContent=p; b.id='pos-'+p; b.onclick=()=>{const off=selPos===p&&!selAcc&&selRule==null;selPos=off?null:p;selRule=null;selAcc=null;update()}; c0.appendChild(b);
