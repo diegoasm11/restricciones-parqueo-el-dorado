@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Restricciones de parqueo El Dorado</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: signage-yellow zone bar, then a spreadsheet-like grid (Posición | Grupos | Límite del plan | Si/Entonces pairs) with arrows drawn over it; side panel explains the selected stand. */
+:root{
+  --bg:#f5f6f3; --surface:#ffffff; --fg:#1b1f1c; --muted:#5d665f; --line:#d5dad4; --stripe:#eceee9;
+  --sign:#f5c400; --sign-fg:#121212;
+  --if:#a9d18e; --if-fg:#1d3a10; --x:#e7a28f; --x-fg:#5b1607; --lim:#cfe4bd; --lim-fg:#24451a; --tow:#bcd3ee; --tow-fg:#173459;
+  --arrow:#e8722a; --sel:#7b3fbf;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141715; --surface:#1c201d; --fg:#e7ebe6; --muted:#9aa49c; --line:#333a35; --stripe:#222724;
+  --sign:#f5c400; --sign-fg:#121212;
+  --if:#3e6b2a; --if-fg:#e3f5d6; --x:#7a2f1e; --x-fg:#ffe1d8; --lim:#2c4a24; --lim-fg:#d6efc4; --tow:#24405f; --tow-fg:#d8e8fb;
+  --arrow:#ff8a3d; --sel:#b98af0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141715; --surface:#1c201d; --fg:#e7ebe6; --muted:#9aa49c; --line:#333a35; --stripe:#222724;
+  --sign:#f5c400; --sign-fg:#121212;
+  --if:#3e6b2a; --if-fg:#e3f5d6; --x:#7a2f1e; --x-fg:#ffe1d8; --lim:#2c4a24; --lim-fg:#d6efc4; --tow:#24405f; --tow-fg:#d8e8fb;
+  --arrow:#ff8a3d; --sel:#b98af0; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:none;margin:0;padding-block:10px 20px;padding-inline:16px;display:flex;flex-direction:column;gap:6px}
+header h1{font-family:var(--f-display);font-weight:700;font-size:1.5rem;line-height:1.1;letter-spacing:.01em;margin:0;text-wrap:balance}
+header p{margin:4px 0 0;color:var(--muted);max-width:75ch}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tabs button{font-family:var(--f-display);font-weight:600;font-size:.9rem;letter-spacing:.04em;text-transform:uppercase;border:2px solid var(--sign-fg);background:var(--surface);color:var(--fg);padding:2px 10px;cursor:pointer;border-radius:2px}
+.tabs button[aria-selected="true"]{background:var(--sign);color:var(--sign-fg)}
+.tabs button:focus-visible,.pos:focus-visible,td.rc:focus-visible{outline:3px solid var(--sel);outline-offset:1px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.75rem;line-height:1.2;color:var(--muted);align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:18px;height:14px;display:inline-block;border:1px solid var(--line)}
+.main{display:flex;gap:10px;align-items:flex-start}
+.main>aside{flex:0 0 340px}
+@media (max-width:900px){.main{flex-direction:column;align-items:stretch}.main>aside{flex:none}}
+.scroller{flex:0 1 auto;max-width:100%;overflow-x:auto;background:var(--surface);border:1px solid var(--line);min-width:0}
+.stage{position:relative;width:max-content}
+#grid thead th.fix{width:1px}
+#grid thead th.fixn{width:300px}
+table{border-collapse:collapse;font-size:.72rem;font-variant-numeric:tabular-nums}
+th,td{border:1px solid var(--line);padding:0 5px;height:16px;line-height:1.15;white-space:nowrap}
+thead th{position:sticky;top:0;background:var(--surface);font-family:var(--f-display);font-weight:600;font-size:.8rem;letter-spacing:.03em;z-index:1}
+tbody tr:nth-child(even) td{background:var(--stripe)}
+tr.zone td{background:var(--sign)!important;color:var(--sign-fg);font-family:var(--f-display);font-weight:700;letter-spacing:.05em}
+.pos{font-family:var(--f-mono);font-weight:700;cursor:pointer;background:none;border:0;color:var(--fg);padding:0;font-size:.72rem}
+td.pc{text-align:center}
+td.note{color:var(--muted);}
+td.note b{color:var(--fg);font-weight:600}
+.mid{color:var(--x-fg);background:var(--x);padding:0 3px;font-weight:600}
+td.note{font-size:.68rem;min-width:220px;white-space:normal;line-height:1.1}
+td.rc{min-width:56px;cursor:pointer}
+td.rc.si{background:var(--if)!important;color:var(--if-fg);font-weight:600}
+td.rc.x{background:var(--x)!important;color:var(--x-fg);font-weight:700;text-align:center}
+td.rc.lim{background:var(--lim)!important;color:var(--lim-fg);font-weight:600}
+td.rc.tow{background:var(--tow)!important;color:var(--tow-fg);font-weight:600}
+th.sep,td.sep{border-left:2px solid var(--fg)}
+tr.hl td:first-child{box-shadow:inset 4px 0 0 var(--sel)}
+.dim td.rc:not(.on){opacity:.35}
+svg.arrows{position:absolute;inset:0;pointer-events:none;overflow:visible}
+svg.arrows line{stroke:var(--arrow);stroke-width:1.6}
+svg.arrows line.off{opacity:.15}
+svg.arrows line.on{stroke-width:2.6}
+svg.arrows marker path{fill:var(--arrow)}
+aside{background:var(--surface);border:1px solid var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:6px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+aside h2{font-family:var(--f-display);font-size:1.6rem;margin:0;line-height:1}
+aside h2 small{font-family:var(--f-body);font-size:.85rem;color:var(--muted);font-weight:500;display:block;margin-top:4px}
+aside h3{font-family:var(--f-display);font-size:1rem;letter-spacing:.05em;text-transform:uppercase;margin:0;color:var(--muted)}
+aside ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+aside li{border-left:3px solid var(--arrow);padding-left:10px;cursor:pointer}
+aside li b{font-family:var(--f-mono);font-size:.85rem}
+aside li .empty{display:block;font-size:.8rem;margin-top:2px}
+aside li q{display:block;color:var(--muted);font-size:.8rem;margin-top:2px}
+aside .empty{color:var(--muted);font-size:.9rem}
+.bar{display:flex;flex-wrap:wrap;gap:6px 24px;align-items:end;justify-content:space-between}
+.search{display:flex;flex-direction:column;gap:2px;min-width:0;flex:0 1 320px}
+.search label{font-family:var(--f-display);font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:.85rem;color:var(--muted)}
+.sbox{display:flex;border:2px solid var(--sign-fg);background:var(--surface)}
+.sbox input{flex:1;min-width:0;border:0;background:transparent;color:var(--fg);font-family:var(--f-mono);font-size:.85rem;padding:3px 8px;text-transform:uppercase}
+.sbox input:focus-visible{outline:3px solid var(--sel);outline-offset:-3px}
+.sbox button{border:0;background:var(--sign);color:var(--sign-fg);font-size:1.2rem;width:38px;cursor:pointer}
+td.acc button{background:none;border:0;padding:0;color:var(--fg);font:inherit;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;font-family:var(--f-mono);font-size:.7rem}
+td.acc button:focus-visible{outline:3px solid var(--sel)}
+tr.ok td:first-child{box-shadow:inset 6px 0 0 var(--if)}
+tr.ok td.acc{background:var(--lim)!important}
+tr.no td:nth-child(-n+3){opacity:.4}
+.glist{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow:auto}
+.grp b,.zres b{font-family:var(--f-mono)}
+.grp span{color:var(--muted);font-size:.8rem}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.chip{font-family:var(--f-mono);font-size:.75rem;padding:1px 6px;border:1px solid var(--line);background:var(--stripe);color:var(--fg)}
+.chip.ex{text-decoration:line-through;opacity:.55}
+.chip.hit{background:var(--sign);color:var(--sign-fg);border-color:var(--sign-fg)}
+button.chip{cursor:pointer}
+button.chip:hover{background:var(--if);color:var(--if-fg)}
+details.ref{background:var(--surface);border:1px solid var(--line)}
+details.ref summary{cursor:pointer;padding:2px 10px;font-family:var(--f-display);font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:.8rem}
+details.ref summary small{font-family:var(--f-body);text-transform:none;letter-spacing:0;color:var(--muted);font-weight:400;margin-left:8px}
+.refgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:4px;padding:0 8px 6px}
+.refgrid .chips{gap:2px;margin-top:2px}
+.refgrid .chip{font-size:.62rem;padding:0 3px}
+.refc{border:1px solid var(--line);border-left:4px solid var(--rcol);padding:2px 5px;line-height:1.15;background:var(--bg)}
+.refc b{font-family:var(--f-mono);font-size:.8rem}
+.refc span.d{color:var(--muted);font-size:.62rem;display:block;line-height:1.1}
+.refc.hit{outline:3px solid var(--sign);outline-offset:-1px}
+.tip{position:fixed;z-index:10;max-width:340px;background:var(--fg);color:var(--bg);font-size:.7rem;line-height:1.35;padding:6px 8px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.tip b{font-family:var(--f-mono)}
+footer{color:var(--muted);font-size:.8rem;max-width:90ch}
+@media (prefers-reduced-motion:no-preference){svg.arrows line{transition:opacity .15s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Restricciones de parqueo El Dorado</h1>
+  </header>
+  <div class="bar">
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="search"><label for="q">Buscar tipo IATA o grupo</label>
+      <div class="sbox"><input id="q" list="iata-list" placeholder="Ej. 320, 73H, 77W, C5" autocomplete="off" spellcheck="false"><button id="qclear" type="button" aria-label="Borrar búsqueda">×</button></div>
+      <datalist id="iata-list"></datalist></div>
+  </div>
+  <div class="legend">
+    <span><i class="sw" style="background:var(--if)"></i>Si (condición)</span>
+    <span><i class="sw" style="background:var(--x)"></i>X cerrada</span>
+    <span><i class="sw" style="background:var(--lim)"></i>Subcategoría máxima</span>
+    <span><span class="mid">⚠</span> el límite en metros corta dentro de una subcategoría</span>
+    <span><i class="sw" style="background:var(--tow)"></i>Remolcado</span>
+    <span>↔ regla en ambos sentidos</span>
+  </div>
+  <details class="ref" id="ref" open><summary>Subcategorías y tipos IATA<small>Toca un tipo para ver dónde parquea; pasa el cursor sobre una celda para ver sus tipos</small></summary><div class="refgrid" id="refgrid"></div></details>
+  <div class="main">
+    <div class="scroller"><div class="stage" id="stage"><table id="grid"></table><svg class="arrows" id="svg"></svg></div></div>
+    <aside id="panel" aria-live="polite"></aside>
+  </div>
+</div>
+
+<script>
+const ZONES={
+ norte:{name:'Espigón Norte',rows:[
+  ['11','C','C'],['12','C','C'],['13','C','C'],['15','D','C, D'],['17','E','C, D, E'],['19','E','C, D, E','Envergadura máx. 61 m'],
+  ['20','D','C, D'],['22','E','C, D, E','Longitud máx. 59 m'],['24','C','C','Todas ingresan remolcadas']]},
+ inter:{name:'Internacional',rows:[['26','C','C'],
+  ['27','E','C, D, E','Fuselaje máx. 61 m'],['28','C','C'],['29','E','C, D, E'],['30','C','C'],['31','C','C'],['32','F','D, E, F'],
+  ['33','C','C'],['34','D','C, D'],['35','E','E'],['36','C','C'],['37','F','D, F'],['38','E','E'],['39','C','C'],['40','C','C'],
+  ['41','E','D, E'],['42','C','C'],['43','D','C, D','D1–D2 en 45: 43 sin restricción'],['45','E','D, E'],['47','D','C, D','D1–D2 en 49: 47 sin restricción'],
+  ['48','C','C'],['49','E','C, D, E'],['50','C','C'],['51','C','C'],['52','E','C, D, E'],['53','C','C'],['54','C','C'],['55','E','E'],
+  ['56','C','C']]},
+ rem:{name:'Remotas',rows:[
+  ['57','C','C'],['58','E','C, D, E'],['59','C','C'],['60','C','C'],['61','C','C'],['62','C','C'],['63','C','C'],['64','C','C'],['65','C','C','Fuselaje máx. 38 m'],['66','C','C'],['67','C','C'],['68','C','C']]},
+ esp:{name:'Espigón Sur',rows:[
+  ['71','C','C'],['72','C','C'],['73','C','C'],['74','C','C'],['75','E','C, D, E','Fuselaje máx. 59 m'],['76','E','C, D, E','Fuselaje máx. 59 m'],
+  ['77','C','C','Fuselaje máx. 40 m'],['78','E','D, E','Fuselaje máx. 59 m'],['79','C','C'],['80','C','C'],['81','E','D, E','Fuselaje máx. 59 m'],
+  ['82','C','C','Fuselaje máx. 30 m, envergadura máx. 28 m'],['83','C','C'],['84','C','C'],['85','C','C'],['86','C','C'],['87','C','C'],['88','C','C'],['89','C','C'],
+  ['101','C','C','Fuselaje máx. 38 m'],['102','C','C','Fuselaje máx. 38 m'],['103','C','C','Fuselaje máx. 38 m'],['104','C','C','Fuselaje máx. 38 m'],
+  ['105','C','C','Fuselaje máx. 38 m'],['106','C','C','Fuselaje máx. 38 m'],['107','C','C','Fuselaje máx. 38 m']]},
+ t2:{name:'T2',rows:[
+  ['F1','C','C','Fuselaje máx. 40 m'],['F2','C','C','Fuselaje máx. 40 m'],['F3','C','C','Fuselaje máx. 40 m'],['F4','C','C','Fuselaje máx. 40 m'],
+  ['F5','C','C','Envergadura máx. 29 m'],['F6','C','C','Fuselaje máx. 38 m'],['F7','C','C','Fuselaje máx. 38 m'],['F8','C','C','Fuselaje máx. 38 m'],
+  ['F9','C','C','Fuselaje máx. 38 m'],['F10','C','C','Envergadura máx. 28 m']]},
+ car:{name:'Carga',rows:[
+  ['E1A','C','C'],['E1','E','D, E','Fuselaje máx. 59 m'],['E1B','C','C'],['E2A','C','C'],['E2','E','D, E','Fuselaje máx. 59 m'],['E2B','C','C'],
+  ['E3A','C','C'],['E3','E','D, E','Fuselaje máx. 59 m'],['E3B','C','C'],['E4A','C','C'],['E4','E','D, E','Fuselaje máx. 59 m'],['E4B','C','C'],
+  ['E5A','C','C'],['E5','E','D, E','Fuselaje máx. 59 m'],['E5B','C','C'],['E6','F','E, F','Envergadura mín. 61 m'],['E7','E','C, E','Envergadura máx. 61 m'],
+  ['E8','E','D, E','Fuselaje máx. 74 m'],['E9','C','C'],['E10','E','C, D, E','Fuselaje máx. 74 m'],['E11','E','C, D, E','Fuselaje máx. 74 m'],
+  ['E12','E','C, D, E','Fuselaje máx. 74 m'],['E13','E','C, D, E','Fuselaje máx. 74 m'],['E14','E','C, D, E','Fuselaje máx. 74 m'],
+  ['E15','D','C, D'],['E15A','F','F','Envergadura máx. 70 m'],['E15B','F','F'],['E15C','C','C','Envergadura 28 m, fuselaje 30 m'],
+  ['E15D','C','C','Envergadura 28 m, fuselaje 30 m'],['E16','D','C, D'],['E17','D','C, D'],['E18','C','C','Ingreso remolcado'],['E19','C','C','Ingreso remolcado'],
+  ['E20','C','C','Ingreso remolcado'],['E21','C','C','Ingreso remolcado'],['E22','C','C','Ingreso remolcado'],['E23','C','C','Ingreso remolcado'],
+  ['E24','C','C','Ingreso remolcado'],['E25','C','C','Ingreso remolcado'],['E26','C','C'],['E27','C','C'],['E28','C','C','Envergadura 29 m, fuselaje 40 m']]},
+ mro:{name:'MRO',rows:[['G1','E','C, D, E','Ingresan y salen remolcadas'],['G2','E','C, D, E','Envergadura máx. 61 m; ingresan y salen remolcadas'],['G3','E','C, D, E','Ingresan y salen remolcadas']]}
+};
+const ANY='Cualquiera', TOW='remolcado';
+const Q={
+ f32:'Si ingresa una aeronave categoría F a la posición 32, posiciones 30,31,32 y 35 cerradas; posición 29 máximo hasta Categoría D igual o inferior a 41.07m (B752); Posición 34 máximo categoría D igual o inferior a 41.07m (B752) y debe ingresar remolcado.',
+ c3133:'Si ingresa una aeronave categoría C a las posiciones 31 o 33 posición 32 cerrada.',
+ t36:'Si hay aeronaves en las posiciones 34 y/o 39, las aeronaves asignadas a la posición 36 ingresan remolcadas.',
+ env:'No se puede ingresar simultáneamente […] dos aeronaves que tengan longitud de envergadura superior a 34,2m.'
+};
+const any=(s,a,b)=>({s,c:ANY,e:[[a,'X'],[b,'X']],q:`Si ingresa una aeronave de cualquier categoría a la posición ${s}, NO se puede ingresar aeronaves a las posiciones ${a} y ${b}.`});
+const pair=(z,a,b)=>({z,s:a,c:'Env. >34,2 m',e:[[b,'No >34,2 m']],m:true,q:Q.env.replace('[…]',`a la posición ${a} y ${b}`)});
+const RULES=[
+ {z:'norte',s:'20',c:'D',e:[['22','máx D']],q:'Si ingresa una aeronave categoría D en la 20, se convierte la posición 22 a máximo categoría D.'},
+ {z:'norte',s:'22',c:'E',e:[['20','máx C']],q:'Si tenemos una aeronave categoría E en la 22, se convierte la posición 20 a máximo categoría C.'},
+ {z:'inter',s:'26',c:'C',e:[['27','máx D ≤41,07 m']],q:'Si ingresa una aeronave categoría C a la posición 26, convierte la posición 27 a máximo categoría D hasta una envergadura de 41.07m (B752).'},
+ {z:'inter',s:'27',c:'E',e:[['26','X'],['28','X']],q:'Si ingresa una aeronave categoría E a la posición 27 NO se puede ingresar aeronave a la posición 26 Y 28.'},
+ {z:'inter',s:'27',c:'D >41,07 m',e:[['28','X']],q:'Si ingresa una aeronave categoría D superior a 41.07m a la PSN 27, la PSN 28 queda cerrada, en caso contrario puede operar sin restricción.'},
+ {z:'inter',s:'28',c:'C',e:[['27','máx C']],q:'Si ingresa una aeronave categoría C a la posición 28, convierte la posición 27 a máximo categoría C.'},
+ {z:'inter',s:'30',c:'C',e:[['29','X']],q:'Si ingresa una aeronave categoría C a la posición 30, NO se puede ingresar aeronaves a la posición 29.'},
+ {z:'inter',s:'29',c:'E',e:[['32','máx E']],q:'Si ingresa una aeronave categoría E a la posición 29, convierte la posición 32 a máximo categoría E.'},
+ {z:'inter',s:'31',c:'C',e:[['32','X']],q:Q.c3133},
+ {z:'inter',s:'33',c:'C',e:[['32','X']],q:Q.c3133},
+ {z:'inter',s:'32',c:'D o E',e:[['31','X'],['33','X']],q:'Si ingresa una aeronave categoría D o E a la posición 32, NO se puede ingresar aeronaves a las posiciones 31 y 33.'},
+ {z:'inter',s:'32',c:'F',e:[['29','máx D ≤41,07 m'],['30','X'],['31','X'],['34','máx D ≤41,07 m + '+TOW],['35','X']],q:Q.f32},
+ {z:'inter',s:'34',c:ANY,e:[['35','X']],q:'No se pueden ingresar simultáneamente dos aeronaves a las posiciones 34 y 35.'},
+ {z:'inter',s:'34',c:'D',e:[['33','X'],['35','X']],q:'Si se ingresa una aeronave categoría D a la posición 34 NO se puede ingresar aeronave a la posición 33 y 35.'},
+ {z:'inter',s:'34',c:ANY,e:[['36',TOW]],q:Q.t36},
+ {z:'inter',s:'35',c:'E',e:[['33','X'],['34','X'],['36','X'],['37','máx D']],q:'Si se ingresa una aeronave categoría E a la posición 35 NO se puede ingresar aeronaves a las posiciones 33, 34 y 36, y la posición 37 se convierte a máximo categoría D.'},
+ {z:'inter',s:'37',c:ANY,e:[['36','X'],['38','X'],['39','X']],q:'Si ingresa una aeronave de cualquier categoría a la posición 37 NO se puede ingresar aeronaves a las posiciones 36, 38 y/o 39.'},
+ {z:'inter',s:'37',c:'F',e:[['35','X'],['36','X'],['38','X'],['39','X']],q:'Si ingresa una aeronave de categoría F a la posición 37 NO se puede ingresar aeronaves a las posiciones 35, 36, 38 y/o 39.'},
+ {z:'inter',s:'38',c:ANY,e:[['36','X'],['37','X'],['39','X']],q:'Si ingresa una aeronave de cualquier categoría a la posición 38 NO se puede ingresar aeronaves a las posiciones 36, 37 y/o 39.'},
+ {z:'inter',s:'39',c:ANY,e:[['36',TOW]],q:Q.t36},
+ {z:'inter',...any('41','40','42')},
+ {z:'inter',s:'43',c:'D',e:[['42','X'],['45','máx D']],q:'Si ingresa una aeronave categoría D a la posición 43, NO se puede ingresar aeronave a la posición 42, y la posición 45 se convierten en máximo categoría D.'},
+ {z:'inter',s:'45',c:'E',e:[['43','máx C'],['47','máx C']],q:'Si ingresa una aeronave de categoría E a la posición 45 convierte las posiciones 43 y 47 a máximo categoría C.'},
+ {z:'inter',s:'47',c:'D >41,07 m',e:[['45','máx E ≤60,30 m · B777 '+TOW],['48','X']],q:'Si ingresa una aeronave categoría D superior a 41.07m de envergadura (B752) a la posición 47, NO se puede ingresar aeronave a la posición 48, y la posición 45 máximo hasta aeronaves categoría E de 60.30m de envergadura (A333), aeronaves tipo B777 deben ingresar remolcadas.'},
+ {z:'inter',s:'49',c:'E ≤60,30 m',e:[['47','máx D ≤41,07 m']],q:'Si ingresa una aeronave categoría E con envergadura igual o inferior a 60.30m (A333) a la posición 49 convierte la posición 47 a máximo categoría D de envergadura 41.07m (B752).'},
+ {z:'inter',s:'49',c:'E >60,30 m',e:[['47','máx D ≤41,07 m + '+TOW]],q:'Si ingresa aeronave categoría E con envergadura superior a 60.30m (B777) a la PSN 49; posición 47 máximo aeronaves categoría D de envergadura 41.07m (B752) debe ingresar remolcadas.'},
+ {z:'inter',...any('49','48','50')},
+ {z:'inter',...any('52','51','53')},
+ {z:'inter',...any('55','54','56')},
+ {z:'rem',...any('58','57','59')},
+ {z:'esp',...any('78','77','79')},
+ {z:'esp',...any('81','80','82')},
+ ...[1,2,3,4,5].map(n=>({z:'car',...any('E'+n,`E${n}A`,`E${n}B`)})),
+ {z:'car',...any('E6','E7','E8')},
+ {z:'car',s:'E8',c:ANY,e:[['E9','X']],q:'Si ingresa una aeronave de cualquier categoría a la posición E8, NO se puede ingresar aeronaves a la posición E9.'},
+ {z:'car',s:'E15',c:ANY,e:[['E15A','X'],['E15B','X'],['E15C','X'],['E15D','X']],q:'Si ingresa una aeronave de cualquier categoría a la posición E15, NO se pueden ingresar aeronaves a las posiciones E15A, E15B, E15C Y E15D.'},
+ {z:'car',s:'E15A',c:'F',e:[['E15','X'],['E15B','X'],['E15C','X'],['E15D','X'],['E16','X']],q:'Si ingresa una aeronave de categoría F a la posición E15A, NO se pueden ingresar aeronaves a las posiciones E15, E15B, E15C, E15D y E16.'},
+ {z:'car',s:'E15B',c:'F',e:[['E15A','X'],['E15C','X'],['E15D','X'],['E16','X']],q:'Si ingresa una aeronave de categoría F a la posición E15B, NO se pueden ingresar aeronaves a las posiciones E15A, E15B, E15C, E15D y E16.'},
+ {z:'car',s:'E15C',c:ANY,e:[['E15','X'],['E15A','X'],['E15B','X']],q:'Si ingresa una aeronave de cualquier categoría a la posición E15C, NO se pueden ingresar aeronaves a las posiciones E15, E15A, y E15B.'},
+ {z:'car',s:'E15D',c:ANY,e:[['E15','X'],['E15A','X'],['E15B','X'],['E16','máx C']],q:'Si ingresa una aeronave de cualquier categoría a la posición E15D, NO se pueden ingresar aeronaves a las posiciones E15, E15A, E15B y la posición E16 se reduce a categoría C.'},
+ {z:'car',s:'E16',c:ANY,e:[['E15A','X'],['E15B','X']],q:'Si ingresa una aeronave de cualquier categoría a la posición E16, NO se pueden ingresar aeronaves a las posiciones E15A y E15B.'},
+ pair('car','E23','E24'),
+ pair('t2','F1','F2'),pair('t2','F2','F3'),pair('t2','F3','F4'),pair('t2','F6','F7'),pair('t2','F7','F8')
+];
+RULES.forEach((r,i)=>r.id=i);
+/* Traducción de categorías y medidas del plan a subcategorías AMS */
+const SUBC={'C':'C1–C6','D':'D1–D2','E':'E1–E4','F':'F1–F2','D o E':'D1–D2 o E1–E4',
+ 'D >41,07 m':'D1 sin B752, o D2 ⚠','E ≤60,30 m':'E1–E2 sin B772 ⚠','E >60,30 m':'E3–E4 o B772 ⚠','Env. >34,2 m':'C5–C6'};
+const SUBE={'máx C':'hasta C6','máx D':'hasta D2','máx E':'hasta E4','No >34,2 m':'hasta C4 (no C5–C6)',
+ 'máx D ≤41,07 m':'hasta C6 + B752 ⚠','máx D ≤41,07 m + remolcado':'hasta C6 + B752, remolcado ⚠',
+ 'máx E ≤60,30 m · B777 remolcado':'hasta E2, B772 remolcado ⚠'};
+const MIDTXT={'41,07':'El plan dice envergadura 41,07 m (B752): corta dentro de D1. Del grupo D solo cabe B752/75F; B762, B763 y demás D1 no.',
+ '60,30':'El plan dice envergadura 60,30 m (A333): corta dentro de E2. B772 (60,9 m) queda por encima; el resto de E1–E2 cabe.'};
+RULES.forEach(r=>{
+  const ms=[];const chk=t=>{for(const k in MIDTXT) if(t.includes(k)&&!ms.includes(MIDTXT[k])) ms.push(MIDTXT[k])};
+  chk(r.c); if(SUBC[r.c]) r.c=SUBC[r.c];
+  r.e=r.e.map(([p,v])=>{chk(v);return [p,SUBE[v]||v]});
+  if(ms.length) r.mid=ms.join(' ');
+});
+/* Límite del plan por posición: medida como detalle, aviso si corta dentro de una subcategoría */
+const MIDPOS={};
+['36','65','101','102','103','104','105','106','107','F6','F7','F8','F9'].forEach(p=>MIDPOS[p]='corta dentro de C2, C3 y C5');
+['62','63','64','66','67','68'].forEach(p=>MIDPOS[p]='corta dentro de C4 y C6');
+function noteHtml(p,note){
+  const extra=(note||'').split(';').map(x=>x.trim()).filter(x=>/remolc|sin restricción/i.test(x));
+  let lim=RES[p]||((note&&!extra.includes(note.trim()))?note:'');
+  const parts=[];
+  if(lim) parts.push(esc(lim));
+  if(MIDPOS[p]) parts[parts.length-1]+=` <span class="mid" title="${esc(MIDPOS[p])}">⚠</span> ${esc(MIDPOS[p])}`;
+  extra.forEach(x=>parts.push('<b>'+esc(x)+'</b>'));
+  return parts.join('<br>');
+}
+
+/* Grupos AMS (tabla de grupos de Diego): definición y tipos IATA cargados en AMS */
+const GROUPS={
+ B:{d:'OACI B por envergadura',t:'H25,303,CJ8,ACT,B20,B40,BE1,BE2,BE3,BE4,BET,BH2,C26,C90,CCJ,CJ2,CN1,CN2,CNJ,CS2,DH6,D38,EM2,EMP,ER4,FRJ,GRS,GR2,J32,J41,K32,L35,L4T,L55,L60,MI8,PA1,PA2,PA3,SWM,WWP,Y12,LJ4,CNC,DHT,J31,BEH,D20,CR19,EM5,ER3,CJ5'},
+ C1:{d:'OACI C, longitud ≤30 m, envergadura ≤28 m',t:'AT4,ATR,AT5,AT7,DH2,DH3,E70,DC3,DF7,GJ5,AT6'},
+ C2:{d:'OACI C, longitud ≤40 m, envergadura ≤29 m',t:'CCX,100,C27,CR7,732,DH7,DH4,GJ5,E90,733,734,735,DC3,A58,F50,73Y'},
+ C3:{d:'OACI C, longitud ≤40 m, envergadura ≤34,2 m',t:'318,319,320,A26,A32,73C'},
+ C4:{d:'OACI C, longitud >40 m, envergadura ≤34,2 m',t:'72F,M82,M83'},
+ C5:{d:'OACI C, longitud ≤40 m, envergadura >34,2 m',t:'31A,31N,31B,32N,32A,32C,32D,73F,73W,73G,722,72W'},
+ C6:{d:'OACI C, longitud >40 m, envergadura >34,2 m',t:'32Q,32B,321,7M8,7M9,73H'},
+ D1:{d:'OACI D, longitud ≤59 m',t:'752,762,763,31Y,70M,75F,76X,76Y,ABY,ANF,C13,C17,D1Y,D8T,IL6,IL7,K35,T20'},
+ D2:{d:'OACI D, longitud >59 m',t:'M1F,764'},
+ E1:{d:'OACI E, envergadura ≤61 m, longitud ≤59 m',t:'788,332,33X,I93'},
+ E2:{d:'OACI E, envergadura ≤61 m, longitud >59 m y ≤74 m',t:'333,789,772,342,343,781'},
+ E3:{d:'OACI E, envergadura >61 m, longitud >59 m y ≤74 m',t:'345,74U,74Y,77X,359,77W,77F,744'},
+ E4:{d:'OACI E, envergadura >61 m, longitud >74 m',t:'346,351'},
+ F1:{d:'OACI F, envergadura ≤70 m',t:'74H,A4N'},
+ F2:{d:'OACI F, envergadura >70 m',t:'A4F,388,74N'}
+};
+Object.values(GROUPS).forEach(g=>g.t=[...new Set(g.t.split(','))]);
+const GC='B,C1,C2,C3,C4,C5,C6';
+const ACC={};
+const setAcc=(list,v)=>list.forEach(p=>ACC[p]=v);
+setAcc(['15','20','34','43','47','E15','E16','E17'],GC+',D1,D2');
+setAcc(['17','45'],GC+',D1,D2,E1,E2,E3,E4');
+setAcc(['19'],GC+',D1,E1,E2'); setAcc(['22','75','76'],GC+',D1,E1');
+setAcc(['27','E7','G2'],GC+',D1,D2,E1,E2');
+setAcc(['29','41','49','52','58'],'D1,D2,E1,E2,E3,E4');
+setAcc(['32'],'D1,D2,E1,E2,E3,E4,F1,F2');
+setAcc(['35','38','55'],'E1,E2,E3,E4');
+setAcc(['36'],'B,C1,C2,C3,C4,C5'); setAcc(['37'],'D1,D2,F1,F2');
+setAcc(['77','101','102','103','104','105','106','107','F6','F7','F8','F9'],'B,C1,C2,C3,C5');
+setAcc(['78','81','E1','E2','E3','E4','E5'],'D1,E1');
+setAcc(['82','F10','E15C','E15D'],'B,C1'); setAcc(['F5','E28'],'B,C1,C2');
+setAcc(['E6'],'E3,E4,F1,F2'); setAcc(['E8'],'D1,D2,E1,E2,E3');
+setAcc(['E10','E11','E12','E13','E14','G3'],GC+',D1,D2,E1,E2,E3');
+setAcc(['E15A'],'E1,E2,E3,E4,F1'); setAcc(['E15B'],'F2');
+setAcc(['G1'],GC+',D1,D2,E1,E2,E3,E4,F1,F2');
+const accOf=p=>(ACC[p]||GC).split(',');
+const RES={'19':'Envergadura máx. 61 m','22':'Longitud máx. 59 m','27':'Envergadura máx. 61 m','36':'Longitud máx. 38 m',
+ '65':'No 7M8, 7M9, 321, 32B, 32Q, 722, 72W, 73H','77':'Longitud máx. 40 m, no B737','82':'Envergadura máx. 28 m, longitud máx. 30 m',
+ 'F1':'Longitud máx. 40 m','F2':'Longitud máx. 40 m','F3':'Longitud máx. 40 m','F4':'Longitud máx. 40 m','F5':'Envergadura máx. 29 m, longitud máx. 40 m',
+ 'F6':'Longitud máx. 38 m','F7':'Longitud máx. 38 m','F8':'Longitud máx. 38 m','F9':'Longitud máx. 38 m, no B737','F10':'Envergadura máx. 28 m, longitud máx. 30 m',
+ 'E6':'Envergadura mín. 61 m','E7':'Envergadura máx. 61 m','E8':'Longitud máx. 74 m','E15A':'Envergadura máx. 70 m','E15B':'Envergadura mín. 70 m',
+ 'E15C':'Envergadura máx. 28 m, longitud máx. 30 m','E15D':'Envergadura máx. 28 m, longitud máx. 30 m','E28':'Envergadura máx. 29 m, longitud máx. 40 m',
+ 'G1':'Longitud máx. 74 m','G2':'Envergadura máx. 61 m','G3':'Longitud máx. 74 m'};
+['62','63','64','66','67','68'].forEach(p=>RES[p]='Longitud máx. 45 m');
+['75','76','78','81','E1','E2','E3','E4','E5'].forEach(p=>RES[p]='Longitud máx. 59 m');
+['101','102','103','104','105','106','107'].forEach(p=>RES[p]='Longitud máx. 38 m, no B737');
+['E10','E11','E12','E13','E14'].forEach(p=>RES[p]='Longitud máx. 74 m');
+const B737=['732','733','734','735','73Y','73C','73F','73W','73G','73H','7M8','7M9'];
+const EXCL={'65':['7M8','7M9','321','32B','32Q','722','72W','73H']};
+['77','101','102','103','104','105','106','107','F9'].forEach(p=>EXCL[p]=B737);
+const groupsOfType=t=>Object.keys(GROUPS).filter(g=>GROUPS[g].t.includes(t));
+/* Compact "B, C1–C6, D1, D2" */
+function compact(list){
+  const out=[];let i=0;
+  while(i<list.length){const m=list[i].match(/^([A-F])(\d)$/);let j=i;
+    if(m){while(j+1<list.length){const n=list[j+1].match(/^([A-F])(\d)$/);if(n&&n[1]===m[1]&&+n[2]===+list[j].slice(1)+1)j++;else break}}
+    out.push(j-i>=2?`${list[i]}–${list[j]}`:list.slice(i,j+1).join(', '));i=j+1}
+  return out.join(', ');
+}
+/* ¿La posición p acepta la búsqueda q? q puede ser un grupo (C5) o un tipo IATA (320) */
+function accepts(p,q){
+  const acc=accOf(p);
+  if(GROUPS[q]) return {ok:acc.includes(q)};
+  const gs=groupsOfType(q).filter(g=>acc.includes(g));
+  if(!gs.length) return {ok:false};
+  if((EXCL[p]||[]).includes(q)) return {ok:false,excl:true};
+  return {ok:true,gs};
+}
+
+const ORDER=['esp','norte','inter','rem','t2','car','mro'];
+let zone='esp', selPos=null, selRule=null, selAcc=null, query='';
+const $=id=>document.getElementById(id);
+const cls=v=>v==='X'?'x':v.startsWith(TOW)?'tow':(v.includes(TOW)?'tow':'lim');
+const desc=r=>`${r.c} en ${r.s} ${r.m?'↔':'→'} `+r.e.map(([p,v])=>`${p}: ${v}`).join(', ');
+
+function layout(z){
+  const rows=ZONES[z].rows, idx=Object.fromEntries(rows.map((r,i)=>[r[0],i]));
+  const cols=[];
+  RULES.filter(r=>r.z===z).forEach(r=>{
+    const ix=[r.s,...r.e.map(e=>e[0])].map(p=>idx[p]); const lo=Math.min(...ix), hi=Math.max(...ix);
+    let c=cols.findIndex(col=>col.every(o=>hi<o.lo||lo>o.hi));
+    if(c<0){cols.push([]);c=cols.length-1}
+    cols[c].push({lo,hi,r});
+  });
+  return {rows,cols};
+}
+
+function render(){
+  const {rows,cols}=layout(zone);
+  const cellMap={};
+  const grid=$('grid'); grid.innerHTML='';
+  const thead=grid.createTHead(), hr=thead.insertRow();
+  ['Posición','Grupos aceptados','Límite del plan'].forEach((t,k)=>{const th=document.createElement('th');th.textContent=t;th.className=k===2?'fixn':'fix';hr.appendChild(th)});
+  cols.forEach(()=>['Si','Entonces'].forEach((t,k)=>{const th=document.createElement('th');th.textContent=t;if(!k)th.className='sep';hr.appendChild(th)}));
+  const tb=grid.createTBody();
+  const zr=tb.insertRow(); zr.className='zone'; const zc=zr.insertCell(); zc.colSpan=3+cols.length*2; zc.textContent=ZONES[zone].name;
+  rows.forEach(([p,mx,acc,note],i)=>{
+    const tr=tb.insertRow(); tr.dataset.pos=p;
+    const c0=tr.insertCell(); const b=document.createElement('button'); b.className='pos'; b.textContent=p; b.id='pos-'+p; b.onclick=()=>{const off=selPos===p&&!selAcc&&selRule==null;selPos=off?null:p;selRule=null;selAcc=null;update()}; c0.appendChild(b);
+    const cg=tr.insertCell(); cg.className='acc'; const gb=document.createElement('button'); gb.id='acc-'+p;
+    gb.textContent=compact(accOf(p))+(RES[p]?' *':''); gb.title='Ver los tipos IATA que acepta '+p;
+    gb.onclick=()=>{const off=selAcc===p;selAcc=off?null:p;selPos=off?null:p;selRule=null;update()}; cg.appendChild(gb);
+    const c3=tr.insertCell(); c3.innerHTML=noteHtml(p,note); c3.className='note';
+    cols.forEach(col=>{
+      const si=tr.insertCell(), th=tr.insertCell(); si.className='sep';
+      const o=col.find(o=>i>=o.lo&&i<=o.hi); if(!o) return;
+      const r=o.r;
+      if(r.s===p){si.textContent=r.c;si.className='sep rc si';si.dataset.rule=r.id;cellMap[r.id+'|s']=si}
+      const ef=r.e.find(e=>e[0]===p);
+      if(ef){th.textContent=ef[1];th.className='rc '+cls(ef[1]);th.dataset.rule=r.id;cellMap[r.id+'|'+p]=th}
+    });
+  });
+  grid.querySelectorAll('td.rc').forEach(td=>{td.tabIndex=0;const go=()=>{const id=+td.dataset.rule;selRule=selRule===id?null:id;selPos=null;selAcc=null;update()};td.onclick=go;td.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}});
+  render.cellMap=cellMap;
+  drawArrows(); update();
+}
+
+function drawArrows(){
+  const svg=$('svg'), st=$('stage').getBoundingClientRect(), m=render.cellMap;
+  svg.setAttribute('width',0); svg.setAttribute('height',0); svg.innerHTML='';
+  svg.setAttribute('width',$('stage').scrollWidth); svg.setAttribute('height',$('stage').scrollHeight);
+  let h='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>';
+  RULES.filter(r=>r.z===zone).forEach(r=>{
+    const s=m[r.id+'|s']; if(!s) return; const a=s.getBoundingClientRect();
+    r.e.forEach(([p])=>{const t=m[r.id+'|'+p]; if(!t) return; const b=t.getBoundingClientRect();
+      const x1=a.left-st.left+Math.min(a.width*.55,40), y1=a.top-st.top+a.height/2, x2=b.left-st.left+12, y2=b.top-st.top+b.height/2;
+      h+=`<line data-rule="${r.id}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#ah)"${r.m?' marker-start="url(#ah)"':''}/>`;});
+  });
+  svg.innerHTML=h;
+}
+
+function activeRules(){
+  if(selRule!=null) return new Set([selRule]);
+  if(selPos) return new Set(RULES.filter(r=>r.z===zone&&(r.s===selPos||r.e.some(e=>e[0]===selPos))).map(r=>r.id));
+  return null;
+}
+
+function update(){
+  const act=activeRules();
+  document.querySelectorAll('#grid tr').forEach(tr=>{tr.classList.toggle('hl',!!selPos&&tr.dataset.pos===selPos);
+    const p=tr.dataset.pos; const a=query&&p?accepts(p,query):null;
+    tr.classList.toggle('ok',!!a&&a.ok); tr.classList.toggle('no',!!a&&!a.ok);});
+  $('grid').classList.toggle('dim',!!act&&act.size>0);
+  document.querySelectorAll('#grid td.rc').forEach(td=>td.classList.toggle('on',!!act&&act.has(+td.dataset.rule)));
+  document.querySelectorAll('#svg line').forEach(l=>{const on=!act||act.size===0||act.has(+l.dataset.rule);l.classList.toggle('off',!on);l.classList.toggle('on',!!act&&act.size>0&&on)});
+  panel(act);
+}
+
+function li(r){const m=r.mid?`<span class="empty"><span class="mid">⚠</span> ${esc(r.mid)}</span>`:'';return `<li data-rule="${r.id}"><b>${esc(desc(r))}</b>${m}<q>${esc(r.q)}</q></li>`}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function panel(act){
+  const P=$('panel'); const zr=RULES.filter(r=>r.z===zone);
+  if(selRule!=null){const r=RULES[selRule];
+    P.innerHTML=`<h2>Regla<small>Posición ${esc(r.s)}, condición ${esc(r.c)}</small></h2><ul>${li(r)}</ul><p class="empty">Toca una posición para ver todas sus reglas.</p>`;
+  } else if(selAcc){
+    const p=selAcc, ex=EXCL[p]||[];
+    P.innerHTML=`<h2>Grupos aceptados en ${esc(p)}<small>${esc(compact(accOf(p)))}${RES[p]?' · '+esc(RES[p]):''}</small></h2>
+      ${ex.length?`<p class="empty">Tipos excluidos en esta posición: ${esc(ex.join(', '))}.</p>`:''}
+      <div class="glist">${accOf(p).map(g=>`<div class="grp"><b>${g}</b> <span>${esc(GROUPS[g].d)}</span><div class="chips">${GROUPS[g].t.map(t=>`<span class="chip${ex.includes(t)?' ex':''}${t===query?' hit':''}">${esc(t)}</span>`).join('')}</div></div>`).join('')}</div>`;
+  } else if(query&&!selPos){
+    const q=query, isG=!!GROUPS[q], gs=isG?[q]:groupsOfType(q);
+    if(!gs.length){P.innerHTML=`<h2>${esc(q)}<small>Sin resultados</small></h2><p class="empty">No encontré ${esc(q)} entre los tipos IATA cargados en AMS ni como grupo. Revisa el código (por ejemplo 320, 73H, 77W) o busca un grupo (C5, E3).</p>`;}
+    else{
+      const zl=ORDER.map(k=>[k,ZONES[k]]).map(([k,z])=>{const ok=[],no=[];z.rows.forEach(r=>{const a=accepts(r[0],q);if(a.ok)ok.push(r[0]);else if(a.excl)no.push(r[0])});return {k,z,ok,no}});
+      const tot=zl.reduce((s,x)=>s+x.ok.length,0);
+      P.innerHTML=`<h2>${isG?'Grupo ':'IATA '}${esc(q)}<small>${gs.map(g=>`${g}: ${esc(GROUPS[g].d)}`).join(' · ')}</small></h2>
+        <h3>Posiciones que lo aceptan (${tot})</h3>
+        ${zl.filter(x=>x.ok.length||x.no.length).map(x=>`<div class="zres"><b>${esc(x.z.name)}</b><div class="chips">${x.ok.map(p=>`<button class="chip go" data-z="${x.k}" data-p="${esc(p)}">${esc(p)}</button>`).join('')}</div>${x.no.length?`<p class="empty">Excluido por tipo en ${esc(x.no.join(', '))}.</p>`:''}</div>`).join('')||'<p class="empty">Ninguna posición lo acepta.</p>'}
+        <p class="empty">Las filas que lo aceptan quedan marcadas en la tabla. Las categorías salen de la tabla de grupos AMS; revisa también las restricciones con las posiciones vecinas.</p>`;
+      P.querySelectorAll('button.go').forEach(b=>b.onclick=()=>{if(zone!==b.dataset.z){zone=b.dataset.z;tabs();selPos=b.dataset.p;selAcc=b.dataset.p;selRule=null;render()}else{selPos=b.dataset.p;selAcc=b.dataset.p;selRule=null;update()}document.getElementById('pos-'+b.dataset.p)?.scrollIntoView({block:'center',behavior:'smooth'})});
+    }
+  } else if(selPos){
+    const row=ZONES[zone].rows.find(x=>x[0]===selPos)||[];
+    const own=zr.filter(r=>r.s===selPos), hit=zr.filter(r=>r.e.some(e=>e[0]===selPos));
+    P.innerHTML=`<h2>Posición ${esc(selPos)}<small>Acepta ${esc(compact(accOf(selPos)))} · OACI máx. ${esc(row[1]||'')}</small></h2>${noteHtml(selPos,row[3])?`<p class="empty">${noteHtml(selPos,row[3])}</p>`:''}
+      <h3>Si hay avión en ${esc(selPos)}</h3>${own.length?`<ul>${own.map(li).join('')}</ul>`:'<p class="empty">No restringe otras posiciones.</p>'}
+      <h3>${esc(selPos)} queda restringida si</h3>${hit.length?`<ul>${hit.map(li).join('')}</ul>`:'<p class="empty">Ninguna otra posición la restringe.</p>'}`;
+  } else P.innerHTML='<h2>Cómo leerlo<small>'+zr.length+' reglas en '+esc(ZONES[zone].name)+'</small></h2><p class="empty">Toca una posición para ver qué restringe y qué la restringe, con el texto del plan. Toca una celda verde o roja para aislar esa regla.</p>';
+  P.querySelectorAll('li').forEach(x=>x.onclick=()=>{const id=+x.dataset.rule;selRule=selRule===id?null:id;selPos=null;selAcc=null;update()});
+}
+
+function tabs(){
+  const T=$('tabs'); T.innerHTML='';
+  ORDER.map(k=>[k,ZONES[k]]).forEach(([k,z])=>{const b=document.createElement('button');b.role='tab';b.id='tab-'+k;b.textContent=z.name;b.setAttribute('aria-selected',k===zone);
+    b.onclick=()=>{zone=k;selPos=null;selRule=null;selAcc=null;tabs();render()};T.appendChild(b)});
+}
+const dl=$('iata-list'); dl.innerHTML=[...Object.keys(GROUPS),...new Set(Object.values(GROUPS).flatMap(g=>g.t))].map(t=>`<option value="${esc(t)}">`).join('');
+$('q').addEventListener('input',e=>{query=e.target.value.trim().toUpperCase();selPos=null;selRule=null;selAcc=null;update()});
+$('qclear').onclick=()=>{$('q').value='';query='';update();$('q').focus()};
+/* Referencia de subcategorías con tipos IATA + tooltip en celdas */
+const GCOL={B:'#9aa49c',C:'#4e9a6b',D:'#3f7fbf',E:'#c9822b',F:'#b04a3a'};
+let showB=false;
+function refGrid(){
+  $('refgrid').innerHTML=Object.keys(GROUPS).map(g=>{const hit=query&&(query===g||GROUPS[g].t.includes(query));
+    return `<div class="refc${hit?' hit':''}" style="--rcol:${GCOL[g[0]]}"><b>${g}</b><span class="d">${esc(GROUPS[g].d.replace('OACI ',''))}</span><div class="chips">${GROUPS[g].t.map((t,i)=>`<button class="chip ref-t${t===query?' hit':''}" data-t="${esc(t)}"${g==='B'&&i>=10&&!showB&&t!==query?' hidden':''}>${esc(t)}</button>`).join('')}${g==='B'?`<button class="chip" id="moreB">${showB?'menos':'+'+(GROUPS.B.t.length-10)+' más'}</button>`:''}</div></div>`}).join('');
+  $('moreB').onclick=()=>{showB=!showB;refGrid()};
+  $('refgrid').querySelectorAll('.ref-t').forEach(b=>b.onclick=()=>{const t=query===b.dataset.t?'':b.dataset.t;$('q').value=t;query=t;selPos=null;selRule=null;selAcc=null;update();refGrid()});
+}
+const ALLG=Object.keys(GROUPS);
+function groupsIn(txt){
+  const out=new Set();
+  (txt.match(/[BCDEF]\d?(?:–[BCDEF]?\d)?/g)||[]).forEach(tok=>{
+    const m=tok.match(/^([BCDEF])(\d)?(?:–([BCDEF])?(\d))?$/); if(!m) return;
+    if(m[1]==='B'&&!m[2]){out.add('B');return}
+    if(!m[2]) return;
+    const a=ALLG.indexOf(m[1]+m[2]), b=m[4]?ALLG.indexOf((m[3]||m[1])+m[4]):a;
+    if(a<0||b<0) return; for(let i=a;i<=b;i++) out.add(ALLG[i]);
+  });
+  if(/^hasta ([CDEF]\d)/.test(txt)){const e=ALLG.indexOf(txt.match(/^hasta ([CDEF]\d)/)[1]);for(let i=0;i<=e;i++)out.add(ALLG[i])}
+  return [...out];
+}
+const tip=document.createElement('div');tip.className='tip';tip.hidden=true;document.body.appendChild(tip);
+function tipHtml(gs,txt=''){gs=ALLG.filter(g=>gs.includes(g));let h=gs.map(g=>`<div><b>${g}</b>: ${g==='B'?GROUPS.B.t.length+' tipos pequeños (ver referencia)':esc(GROUPS[g].t.join(', '))}</div>`).join('');if(/B752/.test(txt)&&!/sin B752/.test(txt))h+='<div><b>+ D1</b>: solo 752 / 75F</div>';return h}
+document.addEventListener('mouseover',e=>{
+  const el=e.target.closest('td.rc,td.acc button'); if(!el){tip.hidden=true;return}
+  let gs=el.matches('td.acc button')?accOf(el.closest('tr').dataset.pos):groupsIn(el.textContent);
+  if(!gs.length){tip.hidden=true;return}
+  tip.innerHTML=tipHtml(gs,el.textContent); tip.hidden=false;
+  const r=el.getBoundingClientRect(); const tw=Math.min(340,innerWidth-16);
+  tip.style.left=Math.max(8,Math.min(r.left,innerWidth-tw-8))+'px';
+  const h=tip.offsetHeight; tip.style.top=(r.bottom+6+h>innerHeight?r.top-h-6:r.bottom+6)+'px';
+});
+addEventListener('scroll',()=>tip.hidden=true,true);
+$('q').addEventListener('input',refGrid); $('qclear').addEventListener('click',refGrid);
+refGrid();
+tabs(); render();
+let rt; addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{drawArrows();update()},80)});
+document.fonts&&document.fonts.ready.then(()=>{drawArrows();update()});
+</script>
+</body>
+</html>
