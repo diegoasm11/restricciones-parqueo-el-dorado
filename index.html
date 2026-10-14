@@ -390,7 +390,7 @@ function drawArrows(){
   const svg=$('svg'), st=$('stage').getBoundingClientRect(), m=render.cellMap;
   svg.setAttribute('width',0); svg.setAttribute('height',0); svg.innerHTML='';
   svg.setAttribute('width',$('stage').scrollWidth); svg.setAttribute('height',$('stage').scrollHeight);
-  let h='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>';
+  let h='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>';
   RULES.filter(r=>r.z===zone).forEach(r=>{
     const s=m[r.id+'|s']; if(!s) return; const a=s.getBoundingClientRect();
     r.e.forEach(([p])=>{const t=m[r.id+'|'+p]; if(!t) return; const b=t.getBoundingClientRect();
