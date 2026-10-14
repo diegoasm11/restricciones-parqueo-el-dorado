@@ -140,7 +140,7 @@ footer{color:var(--muted);font-size:.8rem;max-width:90ch}
     <span><i class="sw" style="background:var(--lim)"></i>Subcategoría máxima</span>
     <span><span class="mid">⚠</span> el límite en metros corta dentro de una subcategoría</span>
     <span><i class="sw" style="background:var(--tow)"></i>Remolcado</span>
-    <span>↔ regla en ambos sentidos</span>
+    <span>↔ cada flecha une una condición (Si) con su efecto (Entonces)</span>
   </div>
   <details class="ref" id="ref"><summary class="reft">Subcategorías y tipos IATA<small>Toca un tipo para ver dónde parquea; pasa el cursor sobre una celda para ver sus tipos</small></summary><div class="refgrid" id="refgrid"></div></details>
   <div class="main">
@@ -342,7 +342,7 @@ const ORDER=['esp','norte','inter','rem','t2','car','mro'];
 let zone='esp', selPos=null, selRule=null, selAcc=null, query='';
 const $=id=>document.getElementById(id);
 const cls=v=>v==='X'?'x':v.startsWith(TOW)?'tow':(v.includes(TOW)?'tow':'lim');
-const desc=r=>`${r.c} en ${r.s} ${r.m?'↔':'→'} `+r.e.map(([p,v])=>`${p}: ${v}`).join(', ');
+const desc=r=>`${r.c} en ${r.s} ↔ `+r.e.map(([p,v])=>`${p}: ${v}`).join(', ');
 
 function layout(z){
   const rows=ZONES[z].rows, idx=Object.fromEntries(rows.map((r,i)=>[r[0],i]));
@@ -395,7 +395,7 @@ function drawArrows(){
     const s=m[r.id+'|s']; if(!s) return; const a=s.getBoundingClientRect();
     r.e.forEach(([p])=>{const t=m[r.id+'|'+p]; if(!t) return; const b=t.getBoundingClientRect();
       const x1=a.left-st.left+Math.min(a.width*.55,40), y1=a.top-st.top+a.height/2, x2=b.left-st.left+12, y2=b.top-st.top+b.height/2;
-      h+=`<line data-rule="${r.id}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#ah)"${r.m?' marker-start="url(#ah)"':''}/>`;});
+      h+=`<line data-rule="${r.id}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#ah)" marker-start="url(#ah)"/>`;});
   });
   svg.innerHTML=h;
 }
@@ -446,7 +446,7 @@ function panel(act){
     P.innerHTML=`<h2>Posición ${esc(selPos)}<small>Acepta ${esc(compact(accOf(selPos)))} · OACI máx. ${esc(row[1]||'')}</small></h2>${noteHtml(selPos,row[3])?`<p class="empty">${noteHtml(selPos,row[3])}</p>`:''}
       <h3>Si hay avión en ${esc(selPos)}</h3>${own.length?`<ul>${own.map(li).join('')}</ul>`:'<p class="empty">No restringe otras posiciones.</p>'}
       <h3>${esc(selPos)} queda restringida si</h3>${hit.length?`<ul>${hit.map(li).join('')}</ul>`:'<p class="empty">Ninguna otra posición la restringe.</p>'}`;
-  } else P.innerHTML='<h2>Cómo leerlo<small>'+zr.length+' reglas en '+esc(ZONES[zone].name)+'</small></h2><p class="empty">Toca una posición para ver qué restringe y qué la restringe, con el texto del plan. Toca una celda verde o roja para aislar esa regla.</p>';
+  } else P.innerHTML='<h2>Cómo leerlo<small>'+zr.length+' reglas en '+esc(ZONES[zone].name)+'</small></h2><p class="empty">Cada flecha tiene punta en los dos extremos: une la condición (Si, verde) de una posición con el efecto (Entonces) en la otra. Toca una posición para ver qué restringe y qué la restringe, con el texto del plan. Toca una celda verde o roja para aislar esa regla.</p>';
   P.querySelectorAll('li').forEach(x=>x.onclick=()=>{const id=+x.dataset.rule;selRule=selRule===id?null:id;selPos=null;selAcc=null;update()});
 }
 
